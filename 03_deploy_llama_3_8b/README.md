@@ -9,6 +9,16 @@ pip install -U anyscale
 anyscale login
 ```
 
+## Download and store model weights to Azure Blob Storage
+
+To use this example, you need to have the model weights stored in Azure Blob Storage. You can download the weights from Hugging Face and then upload them to your Azure Blob Storage account. For example:
+```bash
+hf download meta-llama/Llama-3.1-8B-Instruct --local-dir llama3.1-8b
+cd llama3.1-8b
+azcopy copy . https://<account-name>.blob.core.windows.net/<container-name> --recursive=true
+```
+
+
 ## Deploy the service
 
 Clone the example from GitHub.
@@ -17,19 +27,24 @@ Clone the example from GitHub.
 git clone https://github.com/anyscale/examples.git
 cd examples/03_deploy_llama_3_8b
 ```
-
-Deploy the service. Use `--env` to forward your Hugging Face token if you need authentication for gated models like Llama 3.
-
+Build docker image and push to your container registry:
 ```bash
-export HF_TOKEN=<INSERT HUGGING FACE TOKEN HERE>
-anyscale service deploy -f service.yaml --env HF_TOKEN=$HF_TOKEN
+docker build -t <acr-repository-name>.azurecr.io/deploy-llama-3-1-8b:latest .
+docker push <acr-repository-name>.azurecr.io/deploy-llama-3-1-8b:latest
 ```
 
-If you’re using an ungated model, go to your `LLMConfig` (in `serve_llama_3_1_8b.py`), and set `model_source` to that model. Then, you can omit the Hugging Face token from both the config and the `anyscale service deploy` command.
+Update placeholder values in `service.yaml` and `serve_llama_3_1_8b.py` to point to your storage account, container, model path,
+and image URI.
+
+Then, deploy the service:
+
+```bash
+anyscale service deploy -f service.yaml
+```
 
 ## Understanding the example
 
-- The [application code](https://github.com/anyscale/examples/blob/main/03_deploy_llama_3_8b/serve_llama_3_1_8b.py) sets the required accelerator type with `accelerator_type="L4"`. To use a different accelerator, replace `"L4"` with the desired name. See the [list of supported accelerators](https://docs.ray.io/en/latest/ray-core/accelerator-types.html#accelerator-types) for available options.
+- The [application code](https://github.com/anyscale/examples/blob/main/03_deploy_llama_3_8b/serve_llama_3_1_8b.py) sets the required accelerator type with `accelerator_type="A100"`. To use a different accelerator, replace `"A100"` with the desired name. See the [list of supported accelerators](https://docs.ray.io/en/latest/ray-core/accelerator-types.html#accelerator-types) for available options.
 - Ray Serve automatically autoscales the number of model replicas between `min_replicas` and `max_replicas`. Ray Serve adapts the number of replicas by monitoring queue sizes. For more information on configuring autoscaling, see the [AutoscalingConfig documentation](https://docs.ray.io/en/latest/serve/api/doc/ray.serve.config.AutoscalingConfig.html).
 - This example uses vLLM, and the [Dockerfile](https://github.com/anyscale/examples/blob/main/03_deploy_llama_3_8b/Dockerfile) defines the service’s dependencies. When you run `anyscale service deploy`, the build process adds these dependencies on top of an Anyscale-provided base image.
 - To configure vLLM, modify the `engine_kwargs` dictionary. See [Ray documentation for the `LLMConfig` object](https://docs.ray.io/en/latest/serve/api/doc/ray.serve.llm.LLMConfig.html#ray.serve.llm.LLMConfig).

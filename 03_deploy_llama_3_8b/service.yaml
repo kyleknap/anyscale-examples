@@ -2,12 +2,10 @@
 
 name: deploy-llama-3-1-8b
 
-# When empty, use the default image. This can be an Anyscale-provided base image
-# like anyscale/ray:2.43.0-slim-py312-cu125, a user-provided base image (provided
-# that it meets certain specs), or you can build new images using the Anyscale
-# image builder at https://console.anyscale-staging.com/v2/container-images.
-
-containerfile: ./Dockerfile
+# Requries building an image from the included Dockerfile and pushing it
+# to an azure container registry. Update the image_uri field below with the URI of your
+# image in ACR.
+image_uri: <acr-repository-name>.azurecr.io/<image-name>:<tag>
 
 # When empty, Anyscale will auto-select the instance types. You can also specify
 # minimum and maximum resources.
@@ -26,7 +24,7 @@ compute_config:
 #       min_nodes: 0
 #       max_nodes: 100
 #       market_type: PREFER_SPOT # Defaults to ON_DEMAND
-  auto_select_worker_config: true
+#  auto_select_worker_config: true
 
 # Path to a local directory or a remote URI to a .zip file (S3, GS, HTTP) that
 # will be the working directory for the job. The files in the directory will be
